@@ -12,6 +12,7 @@ typedef int bool;
 
 int *orderOperations(char input_str[], int n);
 int performMath(int num1, int num2, char operation);
+int readStr(char str[], int n);
 int strToNum(char input_str[]);
 int xassert(bool trueCondition, char *s1, char *s2, char *s3);
 
@@ -19,22 +20,49 @@ int xassert(bool trueCondition, char *s1, char *s2, char *s3);
 void main() 
 {
  setlocale(0, "rus");
+ char str[BUFF_SIZE];
+ printf("Hello, waiting for input --> ");
+ int slen;
+ slen = readStr(str, BUFF_SIZE);
+ int i = 0;
+ printf("%d\n", slen);
+ for(i; i < slen + 1; i++){
+ printf("%s", str[i]);
+ }
+ /*while (str[i != slen){
+  printf("%s", str[i++]);
+ }
+ */
+ printf("\n");
+}
+/*
  printf("2 + 36q2 = %d\n", performMath(strToNum("2"), strToNum("36q2"), '+'));
  printf("2 * 23 = %d\n", performMath(2, strToNum("23"), '*'));
  printf("2034 - 3 = %d\n", performMath(strToNum("2034"), 3, '-'));
- /*printf("2 / 3 = %d\n", performMath(2, 3, '/'));
+ printf("2 / 3 = %d\n", performMath(2, 3, '/'));
  printf("2 ^ 3 = %d\n", performMath(2, 3, '^'));
  printf("2 + 3 = %d\n", performMath(2, 3, '+'));
-*/
+
  int *p;
  int i;
  char input_str = "2 * 4 + 5 - 2 / 4";
  p = orderOperations(input_str, strlen(input_str)); 
- /*
+ 
    for (i = 0; i < strlen(input_str); i++) {
    printf("2 * 4 + 5 - 2 / 4 ; operations order: %d\n", *p); 
  }
  */
+ int readStr(char str[], int n)
+ {
+  char ch;
+  int i = 0;
+  while ((ch = getchar()) != '\n'){
+    if (i < n){
+      str[i++] = ch;
+    }
+  }
+  str[i] = '\0';
+  return i;
 }
 
 int performMath(int num1, int num2, char operation)
