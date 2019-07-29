@@ -26,17 +26,21 @@ int xassert(bool trueCondition, char *s1, char *s2, char *s3);
 
 void main() 
 {
- setlocale(0, "rus");
- char str[BUFF_SIZE];
- FILE *fp = fopen(filename, "r");
- printf("Hello, this program works with file streams\n");
-
- bool endFile = false;
- while(!endFile){
-  getLine(fp, str, &endFile, BUFF_SIZE);
-  getStreamResult(str);
-  /*getResult(opers, nums);*/
- } /*endFile block*/
+  setlocale(0, "rus");
+  char str[BUFF_SIZE];
+  FILE *fp = fopen(filename, "r");
+  printf("Hello, this program works with file streams\n");
+  {
+   bool endFile = false;
+   for(;;){
+    getLine(fp, str, &endFile, BUFF_SIZE);
+    if (!endFile) {
+      getStreamResult(str);
+    } else {
+      break;
+    }
+   }
+  }
 }
 
 char *getWord(char *src, 
