@@ -137,28 +137,51 @@ int doOperation(int num1, int num2, char operation)
    }
 	}
 }
-/*
-int getResult(char *opers, int *nums)
-{ 
-  int res = 0;
-  _getResult(opers, nums, "/*");
-  res = _getResult(opers, nums, "+-");
-  printf("Final say: %d\n", res);
-}
-*/
 
 int getStreamResult(char *src)
 { 
-  int num1 = getNum(&src);
+  char prior_opers[] = "*/";
+  int num1;
   while(*src != '\0'){
+    num1 = getNum(&src);
     char op = getOperation(&src);
     int num2 = getNum(&src);
-    printf("%d %c %d = ", num1, op, num2);
-    num1 = doOperation(num1, num2, op); 
     while(haschar(separators, *src)){
       src++;
     }
+    char op2 = getOperation(src);
+    if (haschar(prior_opers, op2)){
+      op2 = getOperation(&src);
+      while (haschar(prior_opers, op2)){
+        int num3 = getNum(&src);
+        num2 = doOperation(num2, num3, op2);
+        op2 = getOperation(&src);
+      }
+      num1 = num1 + num2;
+    } 
+    printf("%d %c %d = ", num1, op, num2);
+    num1 = doOperation(num1, num2, op); 
     printf("%d\n", num1);
+    while(haschar(separators, *src)){
+      src++;
+    }
   }
-  printf("Result: %d\n", num1);
 }
+/*
+  char prior_opers[] = "/";
+  int num1 = getNum(&src);
+  int num2;
+  while(*src != '\0'){
+    char op = getOperation(&src);
+    if (haschar(prior_opers, op)){
+      src--;
+      int tmp_res = num1;
+      num1 = 0;
+      while(!haschar(prior_opers, op)){
+        op = getOperation(&src);
+        num2 = getNum(&src);
+        num1 = doOperation(num1, num2, op); 
+      }
+
+    }
+*/
