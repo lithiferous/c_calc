@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h> 
 #include<string.h>
+#include<math.h>
 #include<locale.h>
 
 #define BUFF_SIZE 128
@@ -16,12 +17,12 @@ typedef int bool;
 
 //specific
 int getNum(char **);
+void putNum(char **, int);
 char getOper(char *, char *);
 char getOperAlias(char **, char *);
 int getPow(int, int);;
 int doOperation(int , int , char );
 int getStreamResult(char *, char *, char *);
-int getResult(char *);
 
 //general functions
 bool haschar(char *, char);
@@ -148,6 +149,23 @@ int getNum(char **src)
   return Num;
 }
 
+void putNum(char **src, int num)
+{ 
+  mvPtrBwd(src, separators);
+  while(num){
+    int divisor = 10;
+    double dnum = (double) num / divisor;
+    double remainder = modf(dnum, &num);
+    int div = __round(remainder * divisor);
+    char cnum = div + '0';
+    //printf("Your num: %c\n", cnum);
+    num = (int) dnum;
+  }
+  while(**src != '('){
+    *(*src)-- = ' ';
+  }
+}
+
 int getPow(int num, int n)
 {
   if (n == 1){
@@ -183,6 +201,21 @@ int getStreamResult(char *src,
                     char *lowOpers, 
                     char *highOpers)
 {
+  int num = 123;
+  while(*src != '\0'){
+    src++;
+  }
+  putNum(&src, num);
+  printf("%s", src);
+  /*
+  mvPtrFw(&src, '\0');
+  bool hasBraces = mvPtrBwd(&src, "(");
+  if (hasBraces){ 
+    while(hasBraces){
+      int res = getStreamResult(&src, "+-", "/*^");
+  }
+  
+}
   int num1 = getNum(&src);
   while(*src != '\0' && *src != ')'){
     char op = getOperAlias(&src, lowOpers);
@@ -208,15 +241,6 @@ int getStreamResult(char *src,
     mvPtrFw(&src, separators);
   }
   return num1;
+  */
 }
 
-int getResult(char *src)
-{
-  mvPtrFw(&src, '\0');
-  bool hasBraces = mvPtrBwd(&src, "(");
-  if (hasBraces){ 
-    while(hasBraces){
-      int res = getStreamResult(src, "+-", "*/^");
-  }
-  
-}
