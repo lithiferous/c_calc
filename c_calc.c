@@ -7,23 +7,29 @@
 #define WORDS_MAX 3
 
 #define separators " ,."
-#define operations "+-/*"
+#define operations "+-/*^"
 #define filename "calc.dat"
 
 typedef int bool;
 #define false 0
 #define true 1
 
-int getNum(char **src);
-char getOper(char *src, char *opers);
-char getOperAlias(char **src, char *opers);
-int doOperation(int num1, int num2, char operation);
-int getStreamResult(char *src, char *curOpers);
+//specific
+int getNum(char **);
+char getOper(char *, char *);
+char getOperAlias(char **, char *);
+int getPow(int, int);;
+int doOperation(int , int , char );
+int getStreamResult(char *, char *, char *);
+int getResult(char *);
 
-bool haschar(char *str, char ch);
-char *getLine(FILE *fp, char *src, bool *isEnd_file, int SIZE_BUFF);
-char *writeResult(FILE *fp, char *dst, int result);
-int xassert(bool trueCondition, char *s1, char *s2, char *s3);
+//general functions
+bool haschar(char *, char);
+void mvPtrFw(char **, char *);
+int mvPtrBwd(char **, char *);
+char *getLine(FILE *, char *, bool *, int);
+char *writeResult(FILE *, char *, int);
+int xassert(bool , char *, char *, char *);
 
 void main() 
 {
@@ -36,8 +42,8 @@ void main()
    for(;;){
     getLine(fp, str, &endFile, BUFF_SIZE);
     if (!endFile) {
-      int res = getStreamResult(str, "+-");
-      printf("Your result: %d", res);
+      int res = getStreamResult(str, "+-", "*/^");
+      printf("Your result: %d\n", res);
     } else {
       break;
     }
@@ -81,9 +87,9 @@ char *getLine(FILE *fp,
 }
 
 int xassert(bool trueCondition, 
-        char *s1, 
-        char *s2, 
-        char *s3)
+            char *s1, 
+            char *s2, 
+            char *s3)
 {
  if ( ! trueCondition ){
   printf("Error:%s%s%s\n", s1, s2, s3);
@@ -100,20 +106,31 @@ bool haschar(char *str, char ch)
  return false;
 }
 
+void mvPtrFw(char **src, char *str)
+{
+ while(haschar(str, **src)){
+         (*src)++;
+    }
+}
+
+bool mvPtrBwd(char **src, char *str)
+{
+ do{
+         (*src)--;
+  }while(haschar(str, **src));
+ return haschar(str, **src);
+}
+
 char getOper(char *src, char *opers)
 {
- while(!haschar(opers, *src)){
-   src++;
- }
+ mvPtrFw(&src, separators);
  char oper = *src++;
  return oper;
 }
 
 char getOperAlias(char **src, char *opers)
 {
- while(!haschar(opers, **src)){
-   (*src)++;
- }
+ mvPtrFw(src, separators);
  if (**src != '\0'){
   char oper = *(*src)++;
   return oper;
@@ -122,9 +139,7 @@ char getOperAlias(char **src, char *opers)
 
 int getNum(char **src)
 {
-  while(haschar(separators, **src)){
-    (*src)++;
-  }
+  mvPtrFw(src, separators);
   int Num = 0; 
   while(( **src != '\0') &&
        ( isdigit(**src) )){
@@ -133,13 +148,26 @@ int getNum(char **src)
   return Num;
 }
 
-int doOperation(int num1, int num2, char operation)
+int getPow(int num, int n)
+{
+  if (n == 1){
+    return num;
+  }
+  return num*getPow(num, n - 1);
+}
+
+int doOperation(int num1, 
+                int num2, 
+                char operation)
 {
 	switch (operation) {
 		case '+': return num1 + num2;  break;
 		case '-': return num1 - num2;  break;
 		case '*': return num1 * num2;  break;
-		case '/': return num1 / num2; break;
+		case '/': 
+    xassert(num2!=0, " division by zero", "", ""); 
+    return num1 / num2; break;
+    case '^': return getPow(num1, num2); break;
 		default : 
    {
     char s[2];
@@ -151,45 +179,44 @@ int doOperation(int num1, int num2, char operation)
 	}
 }
 
-int getStreamResult(char *src, char *curOpers)
+int getStreamResult(char *src,
+                    char *lowOpers, 
+                    char *highOpers)
 {
   int num1 = getNum(&src);
-  while(*src != '\0'){
-    char op = getOperAlias(&src, curOpers);
+  while(*src != '\0' && *src != ')'){
+    char op = getOperAlias(&src, lowOpers);
     int num2 = getNum(&src);
-    while(haschar(separators, *src)){
-         src++;
-    }
-    if (*src != '\0'){
-      char op2 = getOperAlias(&src, "/*");
-      if (haschar("*/", op2)){
-        while(haschar("/*", op2)){
+    mvPtrFw(&src, separators);
+    if (*src != '\0' && *src != ')'){
+      char op2 = getOperAlias(&src, operations);
+      if (haschar(highOpers, op2)){
+        while(haschar(highOpers, op2)){
             int num3 = getNum(&src);
             printf("%d %c %d = ", num2, op2, num3);
             num2 = doOperation(num2, num3, op2);
             printf("%d\n", num2);
             op2 = getOperAlias(&src, operations);
-            while(haschar(separators, *src)){
-              src++;
-            }
+            mvPtrFw(&src, separators);
         }
-        while(!haschar(curOpers, *src))
-          src--;
       }
+      mvPtrBwd(&src, separators);
     }
     printf("%d %c %d = ", num1, op, num2);
     num1 = doOperation(num1, num2, op); 
     printf("%d\n", num1);
-    while(haschar(separators, *src)){
-         src++;
-    }
+    mvPtrFw(&src, separators);
   }
   return num1;
 }
 
 int getResult(char *src)
 {
-  while(*src != '\0'){
-    getStreamResult;
+  mvPtrFw(&src, '\0');
+  bool hasBraces = mvPtrBwd(&src, "(");
+  if (hasBraces){ 
+    while(hasBraces){
+      int res = getStreamResult(src, "+-", "*/^");
   }
+  
 }
