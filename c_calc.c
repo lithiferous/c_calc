@@ -17,7 +17,7 @@ typedef int bool;
 
 //specific
 int getNum(char **);
-void putNum(char **, int);
+bool putNum(char []);
 char getOper(char *, char *);
 char getOperAlias(char **, char *);
 int getPow(int, int);;
@@ -26,7 +26,7 @@ int getStreamResult(char *, char *, char *);
 
 //general functions
 bool haschar(char *, char);
-void mvPtrFw(char **, char *);
+void mvPtrFwd(char **, char *);
 int mvPtrBwd(char **, char *);
 char *getLine(FILE *, char *, bool *, int);
 char *writeResult(FILE *, char *, int);
@@ -43,7 +43,10 @@ void main()
    for(;;){
     getLine(fp, str, &endFile, BUFF_SIZE);
     if (!endFile) {
-      int res = getStreamResult(str, "+-", "*/^");
+      while(putNum(str)){
+        putNum(str);
+      }
+      int res = getStreamResult(str, "+-", "/*^");
       printf("Your result: %d\n", res);
     } else {
       break;
@@ -107,7 +110,7 @@ bool haschar(char *str, char ch)
  return false;
 }
 
-void mvPtrFw(char **src, char *str)
+void mvPtrFwd(char **src, char *str)
 {
  while(haschar(str, **src)){
          (*src)++;
@@ -124,14 +127,14 @@ bool mvPtrBwd(char **src, char *str)
 
 char getOper(char *src, char *opers)
 {
- mvPtrFw(&src, separators);
+ mvPtrFwd(&src, separators);
  char oper = *src++;
  return oper;
 }
 
 char getOperAlias(char **src, char *opers)
 {
- mvPtrFw(src, separators);
+ mvPtrFwd(src, separators);
  if (**src != '\0'){
   char oper = *(*src)++;
   return oper;
@@ -140,7 +143,7 @@ char getOperAlias(char **src, char *opers)
 
 int getNum(char **src)
 {
-  mvPtrFw(src, separators);
+  mvPtrFwd(src, separators);
   int Num = 0; 
   while(( **src != '\0') &&
        ( isdigit(**src) )){
@@ -149,20 +152,39 @@ int getNum(char **src)
   return Num;
 }
 
-void putNum(char **src, int num)
+
+bool putNum(char src[BUFF_SIZE])
 { 
-  mvPtrBwd(src, separators);
-  while(num){
-    int divisor = 10;
-    double dnum = (double) num / divisor;
-    double remainder = modf(dnum, &num);
-    int div = __round(remainder * divisor);
-    char cnum = div + '0';
-    //printf("Your num: %c\n", cnum);
-    num = (int) dnum;
-  }
-  while(**src != '('){
-    *(*src)-- = ' ';
+  if(haschar(src, '(')){
+    int i = 0, j = 0;
+    while(src[i] != '\0'){
+      i++;
+    }
+    while(src[i] != '('){
+      i--;
+    }
+    printf("\n%c\n", src[i]);
+    j = ++i;
+    while(src[i] != ')'){
+      i++;
+    }
+    double num = getStreamResult(&src[j], "+-", "*/^");
+    while(num){
+      int divisor = 10;
+      double dnum = (double) num / divisor;
+      double remainder = modf(dnum, &num);
+      char cnum = round(remainder * divisor + 0.1) + '0';
+      src[i--] = cnum;
+      num = (int)dnum;
+    }
+    while(src[i] != '('){
+      src[i--] = ' ';
+    }
+    src[i] = ' ';
+    printf("%s\n", src);
+    return true;
+  }else{
+    return false;
   }
 }
 
@@ -201,26 +223,12 @@ int getStreamResult(char *src,
                     char *lowOpers, 
                     char *highOpers)
 {
-  int num = 123;
-  while(*src != '\0'){
-    src++;
-  }
-  putNum(&src, num);
-  printf("%s", src);
-  /*
-  mvPtrFw(&src, '\0');
-  bool hasBraces = mvPtrBwd(&src, "(");
-  if (hasBraces){ 
-    while(hasBraces){
-      int res = getStreamResult(&src, "+-", "/*^");
-  }
   
-}
   int num1 = getNum(&src);
   while(*src != '\0' && *src != ')'){
     char op = getOperAlias(&src, lowOpers);
     int num2 = getNum(&src);
-    mvPtrFw(&src, separators);
+    mvPtrFwd(&src, separators);
     if (*src != '\0' && *src != ')'){
       char op2 = getOperAlias(&src, operations);
       if (haschar(highOpers, op2)){
@@ -230,7 +238,7 @@ int getStreamResult(char *src,
             num2 = doOperation(num2, num3, op2);
             printf("%d\n", num2);
             op2 = getOperAlias(&src, operations);
-            mvPtrFw(&src, separators);
+            mvPtrFwd(&src, separators);
         }
       }
       mvPtrBwd(&src, separators);
@@ -238,9 +246,8 @@ int getStreamResult(char *src,
     printf("%d %c %d = ", num1, op, num2);
     num1 = doOperation(num1, num2, op); 
     printf("%d\n", num1);
-    mvPtrFw(&src, separators);
+    mvPtrFwd(&src, separators);
   }
   return num1;
-  */
 }
 
