@@ -16,36 +16,37 @@ typedef int bool;
 #define true 1
 
 //specific
-int getNum(char **);
-bool putNum(char []);
+bool solveBrackets(char []);
 char getOper(char *, char *);
 char getOperAlias(char **, char *);
-int getPow(int, int);;
+int getNum(char **);
+int getPow(int, int);
 int doOperation(int , int , char );
 int getStreamResult(char *, char *, char *);
 
 //general functions
 bool haschar(char *, char);
-void mvPtrFwd(char **, char *);
-int mvPtrBwd(char **, char *);
+bool mvPtrBwd(char **, char *);
 char *getLine(FILE *, char *, bool *, int);
 char *writeResult(FILE *, char *, int);
 int xassert(bool , char *, char *, char *);
+void mvPtrFwd(char **, char *);
 
 void main() 
 {
   setlocale(0, "rus");
   char str[BUFF_SIZE];
   FILE *fp = fopen(filename, "r");
-  printf("Hello, this program works with file streams\n");
+  printf("Hello, this program works with file streams:\n");
   {
    bool endFile = false;
    for(;;){
     getLine(fp, str, &endFile, BUFF_SIZE);
     if (!endFile) {
-      while(putNum(str)){
-        putNum(str);
+      while(solveBrackets(str)){
+        solveBrackets(str);
       }
+      printf("%s\n", str);
       int res = getStreamResult(str, "+-", "/*^");
       printf("Your result: %d\n", res);
     } else {
@@ -103,7 +104,7 @@ int xassert(bool trueCondition,
 
 bool haschar(char *str, char ch)
 {
- while( *str != '\0' ){
+ while( *str != '\0'){
   if ( *(str++) == ch  )
     return true;
  }
@@ -119,10 +120,12 @@ void mvPtrFwd(char **src, char *str)
 
 bool mvPtrBwd(char **src, char *str)
 {
- do{
-         (*src)--;
-  }while(haschar(str, **src));
- return haschar(str, **src);
+ if (**src != '\0'){
+  do{
+          (*src)--;
+    }while(haschar(str, **src));
+  return haschar(str, **src);
+ }
 }
 
 char getOper(char *src, char *opers)
@@ -153,18 +156,18 @@ int getNum(char **src)
 }
 
 
-bool putNum(char src[BUFF_SIZE])
+bool solveBrackets(char src[BUFF_SIZE])
 { 
   if(haschar(src, '(')){
-    int i = 0, j = 0;
+    printf("%s\n", src);
+    int i = 0;
     while(src[i] != '\0'){
       i++;
     }
     while(src[i] != '('){
       i--;
     }
-    printf("\n%c\n", src[i]);
-    j = ++i;
+    int j = ++i;
     while(src[i] != ')'){
       i++;
     }
@@ -181,7 +184,6 @@ bool putNum(char src[BUFF_SIZE])
       src[i--] = ' ';
     }
     src[i] = ' ';
-    printf("%s\n", src);
     return true;
   }else{
     return false;
@@ -223,7 +225,6 @@ int getStreamResult(char *src,
                     char *lowOpers, 
                     char *highOpers)
 {
-  
   int num1 = getNum(&src);
   while(*src != '\0' && *src != ')'){
     char op = getOperAlias(&src, lowOpers);
@@ -234,7 +235,7 @@ int getStreamResult(char *src,
       if (haschar(highOpers, op2)){
         while(haschar(highOpers, op2)){
             int num3 = getNum(&src);
-            printf("%d %c %d = ", num2, op2, num3);
+            printf("\t%d %c %d = ", num2, op2, num3);
             num2 = doOperation(num2, num3, op2);
             printf("%d\n", num2);
             op2 = getOperAlias(&src, operations);
@@ -243,7 +244,7 @@ int getStreamResult(char *src,
       }
       mvPtrBwd(&src, separators);
     }
-    printf("%d %c %d = ", num1, op, num2);
+    printf("\t%d %c %d = ", num1, op, num2);
     num1 = doOperation(num1, num2, op); 
     printf("%d\n", num1);
     mvPtrFwd(&src, separators);
