@@ -17,11 +17,10 @@ typedef int bool;
 
 //specific
 bool solveBrackets(char []);
-char getOper(char *, char *);
-char getOperAlias(char **, char *);
+char getOper(char **, char *);
 int getNum(char **);
 int getPow(int, int);
-int doOperation(int , int , char );
+int doOperation(int , int , char);
 int getStreamResult(char *, char *, char *);
 
 //general functions
@@ -34,7 +33,6 @@ void mvPtrFwd(char **, char *);
 
 void main() 
 {
-  setlocale(0, "rus");
   char str[BUFF_SIZE];
   FILE *fp = fopen(filename, "r");
   printf("Hello, this program works with file streams:\n");
@@ -46,7 +44,7 @@ void main()
       while(solveBrackets(str)){
         solveBrackets(str);
       }
-      printf("%s\n", str);
+      printf("-> %s\n", str);
       int res = getStreamResult(str, "+-", "/*^");
       printf("Your result: %d\n", res);
     } else {
@@ -128,14 +126,7 @@ bool mvPtrBwd(char **src, char *str)
  }
 }
 
-char getOper(char *src, char *opers)
-{
- mvPtrFwd(&src, separators);
- char oper = *src++;
- return oper;
-}
-
-char getOperAlias(char **src, char *opers)
+char getOper(char **src, char *opers)
 {
  mvPtrFwd(src, separators);
  if (**src != '\0'){
@@ -159,7 +150,7 @@ int getNum(char **src)
 bool solveBrackets(char src[BUFF_SIZE])
 { 
   if(haschar(src, '(')){
-    printf("%s\n", src);
+    printf("-> %s\n", src);
     int i = 0;
     while(src[i] != '\0'){
       i++;
@@ -227,18 +218,18 @@ int getStreamResult(char *src,
 {
   int num1 = getNum(&src);
   while(*src != '\0' && *src != ')'){
-    char op = getOperAlias(&src, lowOpers);
+    char op = getOper(&src, lowOpers);
     int num2 = getNum(&src);
     mvPtrFwd(&src, separators);
     if (*src != '\0' && *src != ')'){
-      char op2 = getOperAlias(&src, operations);
+      char op2 = getOper(&src, operations);
       if (haschar(highOpers, op2)){
         while(haschar(highOpers, op2)){
             int num3 = getNum(&src);
             printf("\t%d %c %d = ", num2, op2, num3);
             num2 = doOperation(num2, num3, op2);
             printf("%d\n", num2);
-            op2 = getOperAlias(&src, operations);
+            op2 = getOper(&src, operations);
             mvPtrFwd(&src, separators);
         }
       }
@@ -251,4 +242,3 @@ int getStreamResult(char *src,
   }
   return num1;
 }
-
