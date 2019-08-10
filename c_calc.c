@@ -21,13 +21,12 @@ char getOper(char **, char *);
 int getNum(char **);
 int getPow(int, int);
 int doOperation(int , int , char);
-int getStreamResult(char *, char *, char *);
+int getResult(char *);
 
 //general functions
 bool haschar(char *, char);
 bool mvPtrBwd(char **, char *);
 char *getLine(FILE *, char *, bool *, int);
-char *writeResult(FILE *, char *, int);
 int xassert(bool , char *, char *, char *);
 void mvPtrFwd(char **, char *);
 
@@ -45,7 +44,7 @@ void main()
         solveBrackets(str);
       }
       printf("-> %s\n", str);
-      int res = getStreamResult(str, "+-", "/*^");
+      int res = getResult(str);
       printf("Your result: %d\n", res);
     } else {
       break;
@@ -162,7 +161,7 @@ bool solveBrackets(char src[BUFF_SIZE])
     while(src[i] != ')'){
       i++;
     }
-    double num = getStreamResult(&src[j], "+-", "*/^");
+    double num = getResult(&src[j]);
     while(num){
       int divisor = 10;
       double dnum = (double) num / divisor;
@@ -212,19 +211,17 @@ int doOperation(int num1,
 	}
 }
 
-int getStreamResult(char *src,
-                    char *lowOpers, 
-                    char *highOpers)
+int getResult(char *src)
 {
   int num1 = getNum(&src);
   while(*src != '\0' && *src != ')'){
-    char op = getOper(&src, lowOpers);
+    char op = getOper(&src, "+-");
     int num2 = getNum(&src);
     mvPtrFwd(&src, separators);
     if (*src != '\0' && *src != ')'){
       char op2 = getOper(&src, operations);
-      if (haschar(highOpers, op2)){
-        while(haschar(highOpers, op2)){
+      if (haschar("/*^", op2)){
+        while(haschar("/*^", op2)){
             int num3 = getNum(&src);
             printf("\t%d %c %d = ", num2, op2, num3);
             num2 = doOperation(num2, num3, op2);
