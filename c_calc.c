@@ -182,7 +182,7 @@ bool solveBrackets(char src[BUFF_SIZE])
 
 int getPow(int num, int n)
 {
-  if (n == 1){
+  if (n <= 1){
     return num;
   }
   return num*getPow(num, n - 1);
