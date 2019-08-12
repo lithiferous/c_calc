@@ -7,9 +7,10 @@
 #define BUFF_SIZE 128
 #define WORDS_MAX 3
 
-#define separators " "
-#define floatseparators ".,"
-#define operations "+-/*^"
+#define separators " ,."
+#define addoperations "+-"
+#define muloperations "*/^"
+#define operations "+-*/^"
 #define filename "calc.dat"
 
 typedef int bool;
@@ -17,19 +18,18 @@ typedef int bool;
 #define true 1
 
 //specific
-bool isNeg(char **);
 bool solveBrackets(char []);
 char getOper(char **, char *);
-float getNum(char **);
+int getNum(char **);
 int getPow(int, int);
-float doOperation(float, float, char);
-float getResult(char *);
+int doOperation(int , int , char);
+int getResult(char *);
 
 //general functions
 bool haschar(char *, char);
+bool mvPtrBwd(char **, char *);
 char *getLine(FILE *, char *, bool *, int);
 int xassert(bool , char *, char *, char *);
-void mvPtrBwd(char **, char *);
 void mvPtrFwd(char **, char *);
 
 void main() 
@@ -41,14 +41,15 @@ void main()
    bool endFile = false;
    for(;;){
     getLine(fp, str, &endFile, BUFF_SIZE);
-    if (endFile) {
-      break;
+    if ( endFile ) {
+     break;
     }
-    while(solveBrackets(str));
-printf("-> %s\n", str);
-      float res = getResult(str);
-      //int res = getResult(str);
-printf("Your result: %.6f\n", res);
+    while(solveBrackets(str)){
+      //solveBrackets(str);
+    }
+    printf("-> %s\n", str);
+    int res = getResult(str);
+    printf("Your result: %d\n", res);
    }
   }
 }
@@ -101,10 +102,11 @@ int xassert(bool trueCondition,
 
 bool haschar(char *str, char ch)
 {
-  
- while( *str != '\0'){
-  if ( *(str++) == ch  )
-    return true;
+ if ( ch != '\0' ){
+  while( *str != '\0'){
+   if ( *(str++) == ch  )
+     return true;
+  }
  }
  return false;
 }
@@ -116,58 +118,41 @@ void mvPtrFwd(char **src, char *str)
     }
 }
 
-void mvPtrBwd(char **src, char *str)
+bool mvPtrBwd(char **src, char *str)
 {
-  while(haschar(str, **src)){
-    (*src)--;
-  }
+ if (**src != '\0'){
+  do{
+          (*src)--;
+    }while(haschar(str, **src));
+  return haschar(str, **src);
+ }
 }
 
 char getOper(char **src, char *opers)
-{ 
- mvPtrFwd(src, separators);
- if (**src != '\0'){    
-  char oper = *(*src)++;
-  return oper;
- }
- return '\0';
-} // update haschar opers?
-
-bool isNeg(char **src)
 {
-  if (**src != '\0' && **src =='-'){
-    (*src)++;
-    return true;
-  }
-  return false;
+ mvPtrFwd(src, separators);
+ if ( haschar(opers, **src) ){
+  return *(*src)++;
+ }
+ return '\0'; // нет операции
 }
 
-float getNum(char **src)
+int getNum(char **src)
 {
   mvPtrFwd(src, separators);
-  bool neg = isNeg(src);
-  mvPtrFwd(src, separators);
-  float Num = 0; 
-  while(isdigit(**src)){
+  int Num = 0; 
+  while(( **src != '\0') &&
+       ( isdigit(**src) )){
 	  Num = Num * 10 + *(*src)++ - '0'; 
   }
-  float divisor = 10;
-  if (haschar(floatseparators, *(*src)++));
-    while(isdigit(**src)){
-      Num += (*(*src)++ - '0') / divisor;
-      divisor *= 10;
-    }
-  if (neg)
-    return -Num;
-  else 
-    return Num;
+  return Num;
 }
 
 
 bool solveBrackets(char src[BUFF_SIZE])
 { 
   if(haschar(src, '(')){
-printf("-> %s\n", src);
+    printf("-> %s\n", src);
     int i = 0;
     while(src[i] != '\0'){
       i++;
@@ -179,16 +164,29 @@ printf("-> %s\n", src);
     while(src[i] != ')'){
       i++;
     }
+
+    /*
+    double num = getResult(&src[j]);
+    while(num){
+      int divisor = 10;
+      double dnum = (double) num / divisor;
+      double remainder = modf(dnum, &num);
+      char cnum = round(remainder * divisor + 0.1) + '0';
+      src[i--] = cnum;
+      num = (int)dnum;
+    }
+    */
     int num = getResult(&src[j]);
     do{
       int divisor = 10;
       src[i--] = num % divisor + '0';
       num /= divisor;
-    }while( num != 0 );
+    }while( num != 0 )
     
-    do {
+    while(src[i] != '('){
       src[i--] = ' ';
-    } while(i != j - 2);
+    }
+    src[i] = ' ';
     return true;
   }else{
     return false;
@@ -203,9 +201,9 @@ int getPow(int num, int n)
   return num*getPow(num, n - 1);
 }
 
-float doOperation(float num1, 
-                  float num2, 
-                  char operation)
+int doOperation(int num1, 
+                int num2, 
+                char operation)
 {
 	switch (operation) {
 		case '+': return num1 + num2;  break;
@@ -214,8 +212,7 @@ float doOperation(float num1,
 		case '/': 
     xassert(num2!=0, " division by zero", "", ""); 
     return num1 / num2; break;
-    case '^': return getPow(num1, num2); break;
-    case '(': return num1 + num2;  break;
+  case '^': return getPow(num1, num2); break;
 		default : 
    {
     char s[2];
@@ -227,29 +224,32 @@ float doOperation(float num1,
 	}
 }
 
-float getResult(char *src)
+int getResult(char *src)
 {
-  float num1 = getNum(&src);
+  int num1 = getNum(&src);
   while(*src != '\0' && *src != ')'){
     char op = getOper(&src, "+-/*^");
-    float num2 = getNum(&src);
+    int num2 = getNum(&src);
     mvPtrFwd(&src, separators);
     if (*src != '\0' && *src != ')'){
-      for(;;){
-        char op2 = getOper(&src, operations);
-        if ( ! haschar("/*^", op2)){
-          break;
-        }
-        float num3 = getNum(&src);
-printf("\t%.6f %c %.6f = ", num2, op2, num3);
-        num2 = doOperation(num2, num3, op2);
-printf("%.6f\n", num2);
+     for(;;){
+      char op2 = getOper(&src, "+-/*^");
+      if( ! haschar("/*^", op2)) {
+       break;
       }
-    }  
-printf("\t%.6f %c %.6f = ", num1, op, num2);
+      int num3 = getNum(&src);
+      printf("\t%d %c %d = ", num2, op2, num3);
+      num2 = doOperation(num2, num3, op2);
+      printf("%d\n", num2);
+     }
+     //if ( *src != '\0'){
+     // src--;
+     //}
+    }
+    printf("\t%d %c %d = ", num1, op, num2);
     num1 = doOperation(num1, num2, op); 
-printf("%.6f\n", num1);
-    mvPtrFwd(&src, separators);
+printf("%d\n", num1);
   }
   return num1;
 }
+
