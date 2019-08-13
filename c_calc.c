@@ -6,11 +6,13 @@
 
 #define BUFF_SIZE 128
 #define WORDS_MAX 3
+#define N_SIGN_DGTS 6
 
 #define separators " "
 #define floatseparators ".,"
 #define operations "+-/*^"
 #define filename "calc.dat"
+
 
 typedef int bool;
 #define false 0
@@ -18,19 +20,22 @@ typedef int bool;
 
 //specific
 bool isNeg(char **);
-bool solveBrackets(char []);
-char getOper(char **, char *);
-float getNum(char **);
+bool solveBrackets(char[]);
+char getOper(char**, char*);
+float getNum(char**);
 int getPow(int, int);
 float doOperation(float, float, char);
-float getResult(char *);
+float getResult(char*);
 
 //general functions
-bool haschar(char *, char);
-char *getLine(FILE *, char *, bool *, int);
-int xassert(bool , char *, char *, char *);
-void mvPtrBwd(char **, char *);
-void mvPtrFwd(char **, char *);
+bool haschar(char*, char);
+char *getLine(FILE*, char*, bool*, int);
+int strlenRev(char*);
+int xassert(bool, char*, char*, char*);
+void mvPtrBwd(char**, char*);
+void mvPtrFwd(char**, char*);
+void shitfStr(char[], int);
+void reverseStr(char[], int);
 
 void main() 
 {
@@ -123,6 +128,52 @@ void mvPtrBwd(char **src, char *str)
   }
 }
 
+void reverseStr(char src[BUFF_SIZE], int len)
+{
+  len++;
+  int i = 0, j = len;
+  int mid = len % 2 == 0 ? len/2 : (len -1)/2;
+  if (len % 2 == 0){
+    do{
+        char tmp = *(src+j);
+        *(src + j--) = *(src + i);
+        *(src + i++) = tmp;
+    }while(i != mid);
+  } else {
+    for (i = 0; i != mid; ++i){
+        char tmp = *(src+j);
+        *(src + j--) = *(src + i);
+        *(src + i) = tmp;
+    } 
+  }
+}
+
+void shitfStr(char src[BUFF_SIZE], int n)
+{ 
+  xassert(strlen(src) + 1 + n < BUFF_SIZE, \
+          "string buffer exceeded\n", "", "");
+  for (int i = 0; i != n; ++i){
+    char *p = src;
+    char cur = *p;
+    while(*p != '\0'){
+      char next = *(++p);
+      *p = cur;
+      cur = next;
+    }
+    *p = '\0';
+  }
+}
+
+int strlenRev(char* src)
+{
+  int counter = 0;
+  while(*src != '\0'){
+    counter++;
+    src--;
+  }
+  return --counter;
+}
+
 char getOper(char **src, char *opers)
 { 
  mvPtrFwd(src, separators);
@@ -181,13 +232,36 @@ printf("-> %s\n", src);
     while(src[i] != ')'){
       i++;
     }
-    int num = getResult(&src[j]);
-    do{
-      int divisor = 10;
-      src[i--] = num % divisor + '0';
-      num /= divisor;
-    }while( num != 0 );
-    
+    float num = getResult(&src[j]);
+printf("<< %.6f\n", num);
+
+    char cNum[BUFF_SIZE];
+    char *p = &cNum;
+    *(p++) = '\0';
+    int signPart = N_SIGN_DGTS;
+    num *= getPow(10, signPart);
+    while (signPart){
+      *(p++) = (int) num % 10 + '0';
+      num /= 10;
+      signPart--;
+    }
+    *(p++) = '.';
+    while((int) num!=0){
+      *(p++) = (int) num % 10 + '0';
+      num /= 10;
+    }
+    int nchars = strlenRev(--p);
+    int diff = i - j + 2 - nchars - 1;
+    if (diff >= 0){
+      reverseStr(&cNum, nchars);
+      strcpy(&src[j], &cNum);
+    } else {
+      shitfStr(&src[j], -diff);
+      reverseStr(&cNum, nchars);
+      strcpy(&cNum, &src[++i]);
+      strcpy(&src[j], &cNum);
+    }
+    i -= nchars + 1;
     do {
       src[i--] = ' ';
     } while(i != j - 2);
