@@ -5,12 +5,12 @@
 #include<locale.h>
 
 #define BUFF_SIZE 128
+#define MBUFF_SIZE BUFF_SIZE / 2 + 1
 #define WORDS_MAX 3
 #define N_SIGN_DGTS 6
 
-#define separators " "
-#define floatseparators ".,"
-#define operations "+-/*^"
+#define separators " ,."
+#define operations "+-/*^()"
 #define filename "calc.dat"
 
 
@@ -20,77 +20,48 @@ typedef int bool;
 
 //specific
 bool isNeg(char **);
-bool solveBrackets(char[]);
-char getOper(char**, char*);
+int countTotalOpers(char*);
+float getPow(float, float);
 float getNum(char**);
-int getPow(int, int);
 float doOperation(float, float, char);
 float getResult(char*);
+float solveRec(char*, int, float*, int, int, float*);
+void getNums(char *, float*, bool);
+void getOpers(char*, char*, bool);
 
 //general functions
 bool haschar(char*, char);
-char *getLine(FILE*, char*, bool*, int);
-int strlenRev(char*);
+bool getLine(FILE*, char*);
 int xassert(bool, char*, char*, char*);
-void mvPtrBwd(char**, char*);
 void mvPtrFwd(char**, char*);
-void shitfStr(char[], int);
-void reverseStr(char[], int);
 
 void main() 
 {
   char str[BUFF_SIZE];
   FILE *fp = fopen(filename, "r");
   printf("Hello, this program works with file streams:\n");
-  {
-   bool endFile = false;
-   for(;;){
-    getLine(fp, str, &endFile, BUFF_SIZE);
-    if (endFile) {
-      break;
-    }
-    while(solveBrackets(str));
+  while(getLine(fp, &str)){
 printf("-> %s\n", str);
-      float res = getResult(str);
-      //int res = getResult(str);
+    float res = getResult(str);
+    //int res = getResult(str);
 printf("Your result: %.6f\n", res);
-   }
   }
 }
 
-char *getWord(char *src, 
-              char *dst) 
+bool getLine(FILE *fp, char *src)
 {
- while(haschar(separators, *src)){
-    src++;
- }
- while(*src != '\0' &&
-       ! haschar(separators, *src)){
-    *dst++ = *src++;
- }
- *dst = '\0';
- return src;
-}
-
-char *getLine(FILE *fp,
-              char *src,
-              bool *isEnd_file,
-              int SIZE_BUFF)
-{
- *isEnd_file = false;
  char ch;
  int i = 0;
- while ( i < SIZE_BUFF - 1 ) {
+ while( i < BUFF_SIZE - 1 ){
    ch = getc(fp);
-   *src = ch;
-   if (ch == EOF || ch == '\n'){ 
-    *isEnd_file = ch == EOF;
+   if (ch == '\n' || ch == EOF)
     break;
-   }
-   src++;
+   *src++ = ch;
  }
  *src = '\0';
- return src;
+ if (ch == '\n')
+  return true;
+ return false;
 }
 
 int xassert(bool trueCondition, 
@@ -121,69 +92,6 @@ void mvPtrFwd(char **src, char *str)
     }
 }
 
-void mvPtrBwd(char **src, char *str)
-{
-  while(haschar(str, **src)){
-    (*src)--;
-  }
-}
-
-void reverseStr(char src[BUFF_SIZE], int len)
-{
-  len++;
-  int i = 0, j = len;
-  int mid = len % 2 == 0 ? len/2 : (len -1)/2;
-  if (len % 2 == 0){
-    do{
-        char tmp = *(src+j);
-        *(src + j--) = *(src + i);
-        *(src + i++) = tmp;
-    }while(i != mid);
-  } else {
-    for (i = 0; i != mid; ++i){
-        char tmp = *(src+j);
-        *(src + j--) = *(src + i);
-        *(src + i) = tmp;
-    } 
-  }
-}
-
-void shitfStr(char src[BUFF_SIZE], int n)
-{ 
-  xassert(strlen(src) + 1 + n < BUFF_SIZE, \
-          "string buffer exceeded\n", "", "");
-  for (int i = 0; i != n; ++i){
-    char *p = src;
-    char cur = *p;
-    while(*p != '\0'){
-      char next = *(++p);
-      *p = cur;
-      cur = next;
-    }
-    *p = '\0';
-  }
-}
-
-int strlenRev(char* src)
-{
-  int counter = 0;
-  while(*src != '\0'){
-    counter++;
-    src--;
-  }
-  return --counter;
-}
-
-char getOper(char **src, char *opers)
-{ 
- mvPtrFwd(src, separators);
- if (**src != '\0'){    
-  char oper = *(*src)++;
-  return oper;
- }
- return '\0';
-} // update haschar opers?
-
 bool isNeg(char **src)
 {
   if (**src != '\0' && **src =='-'){
@@ -193,85 +101,70 @@ bool isNeg(char **src)
   return false;
 }
 
-float getNum(char **src)
+void getOpers(char *src, 
+              char *dst_opers,
+              bool neg)
+{ 
+ mvPtrFwd(&src, separators);
+ if (neg)
+  mvPtrFwd(&src, "-");
+ while (*src != '\0'){
+  if(haschar(operations,*src))    
+    *dst_opers++ = *src++;
+  else if(haschar("()., ", *src) ||
+          isdigit(*src))
+    *src++;
+  else{
+    char s[2]; s[0] = *src; s[1] = '\0';
+    xassert(false, "wrong math operation", s, "!");
+  }
+ }
+ *dst_opers = '\0';
+}
+
+int countTotalOpers(char *src)
 {
-  mvPtrFwd(src, separators);
-  bool neg = isNeg(src);
-  mvPtrFwd(src, separators);
-  float Num = 0; 
+  int cnt = 0;
+  while(*src != '\0'){
+    if (!haschar(")", *src++))
+      cnt++;
+  }
+  return cnt;
+}
+
+float getNum(char** src)
+{
+  mvPtrFwd(src, " +-/*()^");
+  float num = 0; 
   while(isdigit(**src)){
-	  Num = Num * 10 + *(*src)++ - '0'; 
+	  num = num * 10 + *(*src)++ - '0'; 
   }
   float divisor = 10;
-  if (haschar(floatseparators, **src)){
+  if (haschar(".,", **src)){
     *(*src)++;
     while(isdigit(**src)){
-      Num += (*(*src)++ - '0') / divisor;
+      num += (*(*src)++ - '0') / divisor;
       divisor *= 10;
     }
   }
-  if (neg)
-    return -Num;
-  else 
-    return Num;
+  return num;
 }
 
-
-bool solveBrackets(char src[BUFF_SIZE])
-{ 
-  if(haschar(src, '(')){
-printf("-> %s\n", src);
-    int i = 0;
-    while(src[i] != '\0'){
-      i++;
-    }
-    while(src[i] != '('){
-      i--;
-    }
-    int j = ++i;
-    while(src[i] != ')'){
-      i++;
-    }
-    float num = getResult(&src[j]);
-printf("<< %.6f\n", num);
-
-    char cNum[BUFF_SIZE];
-    char *p = &cNum;
-    *(p++) = '\0';
-    int signPart = N_SIGN_DGTS;
-    num *= getPow(10, signPart);
-    while (signPart){
-      *(p++) = (int) num % 10 + '0';
-      num /= 10;
-      signPart--;
-    }
-    *(p++) = '.';
-    while((int) num!=0){
-      *(p++) = (int) num % 10 + '0';
-      num /= 10;
-    }
-    int nchars = strlenRev(--p);
-    int diff = i - j + 2 - nchars - 1;
-    if (diff >= 0){
-      reverseStr(&cNum, nchars);
-      strcpy(&src[j], &cNum);
-    } else {
-      shitfStr(&src[j], -diff);
-      reverseStr(&cNum, nchars);
-      strcpy(&cNum, &src[++i]);
-      strcpy(&src[j], &cNum);
-    }
-    i -= nchars + 1;
-    do {
-      src[i--] = ' ';
-    } while(i != j - 2);
-    return true;
-  }else{
-    return false;
+void getNums(char *src, 
+             float *num,
+             bool neg)
+{
+  if(neg){
+    *num++ = - getNum(&src);
+    mvPtrFwd(&src, " +-/*()^");
+  }
+  while(*src != '\0'){
+    *num++ = getNum(&src);
+    mvPtrFwd(&src, " +-/*()^");
   }
 }
 
-int getPow(int num, int n)
+float getPow(float num, float n)
 {
   if (n <= 1){
     return num;
@@ -303,30 +196,31 @@ float doOperation(float num1,
 	}
 }
 
+float solveRec(char* opers,
+               int curoper,
+               float* nums, 
+               int curnum, 
+               int n,
+               float* res)
+{ 
+ if (n==1){
+    *res = doOperation(nums[curnum], nums[curnum+1], opers[curoper]); 
+    return n;
+ }
+  return solveRec(opers, ++curoper, nums, ++curnum, --n, res);
+}
+
 float getResult(char *src)
 {
-  float num1 = getNum(&src);
-  while(*src != '\0' && *src != ')'){
-    char op = getOper(&src, "+-/*^");
-    float num2 = getNum(&src);
-    mvPtrFwd(&src, separators);
-    if (*src != '\0' && *src != ')'){
-      for(;;){
-        char op2 = getOper(&src, operations);
-        if ( ! haschar("/*^", op2)){
-          mvPtrBwd(&src, separators);
-          break;
-        }
-        float num3 = getNum(&src);
-printf("\t%.6f %c %.6f = ", num2, op2, num3);
-        num2 = doOperation(num2, num3, op2);
-printf("%.6f\n", num2);
-      }
-    }  
-printf("\t%.6f %c %.6f = ", num1, op, num2);
-    num1 = doOperation(num1, num2, op); 
-printf("%.6f\n", num1);
-    mvPtrFwd(&src, separators);
-  }
-  return num1;
+  char opers[MBUFF_SIZE];  
+  float nums[MBUFF_SIZE];
+
+  bool neg = isNeg(&src);
+  getOpers(src, opers, neg);
+  getNums(src, nums, neg);
+  int cnt = countTotalOpers(opers);
+  int *res = 0;
+  nums[0] = solveRec(opers, 0, nums, 0, cnt, res);
+  printf("%.6f\n", *res);
+  return nums[0];
 }
