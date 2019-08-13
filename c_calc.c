@@ -152,11 +152,13 @@ float getNum(char **src)
 	  Num = Num * 10 + *(*src)++ - '0'; 
   }
   float divisor = 10;
-  if (haschar(floatseparators, *(*src)++));
+  if (haschar(floatseparators, **src)){
+    *(*src)++;
     while(isdigit(**src)){
       Num += (*(*src)++ - '0') / divisor;
       divisor *= 10;
     }
+  }
   if (neg)
     return -Num;
   else 
@@ -238,6 +240,7 @@ float getResult(char *src)
       for(;;){
         char op2 = getOper(&src, operations);
         if ( ! haschar("/*^", op2)){
+          mvPtrBwd(&src, separators);
           break;
         }
         float num3 = getNum(&src);
