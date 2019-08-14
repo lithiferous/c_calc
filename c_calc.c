@@ -24,8 +24,9 @@ int countTotalOpers(char*);
 float getPow(float, float);
 float getNum(char**);
 float doOperation(float, float, char);
+float solveSeq(char *, char*, float*, int*);
 float getResult(char*);
-float solveRec(char*, int, float*, int, int, float*);
+void solveBrackes(char*);
 void getNums(char *, float*, bool);
 void getOpers(char*, char*, bool);
 
@@ -43,7 +44,6 @@ void main()
   while(getLine(fp, &str)){
 printf("-> %s\n", str);
     float res = getResult(str);
-    //int res = getResult(str);
 printf("Your result: %.6f\n", res);
   }
 }
@@ -122,15 +122,7 @@ void getOpers(char *src,
  *dst_opers = '\0';
 }
 
-int countTotalOpers(char *src)
-{
-  int cnt = 0;
-  while(*src != '\0'){
-    if (!haschar(")", *src++))
-      cnt++;
-  }
-  return cnt;
-}
+void solveBrackes(char*);
 
 float getNum(char** src)
 {
@@ -196,18 +188,24 @@ float doOperation(float num1,
 	}
 }
 
-float solveRec(char* opers,
-               int curoper,
-               float* nums, 
-               int curnum, 
-               int n,
-               float* res)
-{ 
- if (n==1){
-    *res = doOperation(nums[curnum], nums[curnum+1], opers[curoper]); 
-    return n;
- }
-  return solveRec(opers, ++curoper, nums, ++curnum, --n, res);
+float solveSeq(char *opers,
+               char *actual_opers,
+               float *nums,
+               int *curpos)
+{
+  while(*(opers+*curpos)!='\0' &&
+          *(nums+*curpos+1) > 0){
+    if(haschar(actual_opers, *(opers+*curpos+1))){
+      *(nums+*curpos+2) = doOperation(*(nums+*curpos+1), *(nums+*curpos+2), *(opers+*curpos+1));
+      *(opers+*curpos+1) = ' ';
+      *(nums+*curpos+1) = -1;
+    } else if(haschar(actual_opers, *(opers+*curpos))){
+      *(nums+*curpos+1) = doOperation(*(nums+*curpos), *(nums+*curpos+1), *(opers+*curpos));
+      *(opers+*curpos) = ' ';
+      *(nums+*curpos) = -1;
+    }
+    (*curpos)++;
+  }
 }
 
 float getResult(char *src)
@@ -218,9 +216,45 @@ float getResult(char *src)
   bool neg = isNeg(&src);
   getOpers(src, opers, neg);
   getNums(src, nums, neg);
-  int cnt = countTotalOpers(opers);
-  int *res = 0;
-  nums[0] = solveRec(opers, 0, nums, 0, cnt, res);
-  printf("%.6f\n", *res);
+
+  int i; //not following \0
+  if (haschar(opers, '(')){
+    while(haschar(opers, '(')){
+      i = 0;
+      while(opers[i] != '\0' &&
+            opers[i] != ')'){
+        i++;
+      }
+      if(opers[i] != '\0')
+        opers[i] = ' ';
+      while(opers[i] != '\0' &&
+              opers[i] != '('){
+        i--;
+      }
+      opers[i++] = ' ';
+      while(opers[i] != '\0'){//delete
+        solveSeq(&opers, "^", &nums, &i);
+        solveSeq(&opers, "/*", &nums, &i);
+        i++;
+      }
+    }
+  } 
+  i = 0;
+  while(opers[i] != '\0'){
+    solveSeq(&opers, "^", &nums, &i);
+    solveSeq(&opers, "/*", &nums, &i);
+    i++;
+  }
+  
+  i = 0;
+  int j = 0;
+  while(opers[i] != '\0'){
+    if(haschar("+-", opers[i])){
+      while(nums[j] < 0){j++;}  
+      nums[0] = doOperation(nums[0], nums[j++], opers[i]);
+    }
+    i++;
+  }
+  printf("%.6f\n", nums[0]);
   return nums[0];
 }
