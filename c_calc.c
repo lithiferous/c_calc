@@ -22,10 +22,11 @@ typedef int bool;
 bool isNeg(char **);
 float getNum(char**);
 float getPow(float, float);
-float doOper(float, float, char);
 float getResult(char*);
+float doOper(float, float, char);
+float SumNonSeq(char*, int, float*, int, int);
 void solveBrackes(char*, char*, float*);
-void solveSeq(char *, char*, float*);
+void solveSeq(char *, char*, float*, int);
 void getNums(char *, float*, bool);
 void getOpers(char*, char*, bool);
 
@@ -122,55 +123,6 @@ void getOpers(char *src,
  *dst_opers = '\0';
 }
 
-int getIndNum(char *src, 
-              char *opers,
-              int posOp)
-{
-  int curp = 0, cnt = 0;
-  while(posOp){
-    if(haschar("-+/*^()", *src))
-      posOp--;
-    if(isdigit(*(src++)))
-      cnt++;
-    curp++;
-  }
-  return cnt;
-}
-
-void solveBrackes(char *src,
-                  char *opers,
-                  float *nums)
-{
-  while(haschar(opers, '(')){
-    int i = 0;
-    while(opers[i] != ')'){
-      i++;
-    }
-    opers[i] = ' ';
-    
-    int j = i;
-    while(opers[i] != '\0' &&
-            opers[i] != '('){
-      i--;
-    }
-    opers[i++] = ' ';
-
-    int inum = getIndNum(src, opers, i);
-    solveSeq(&opers[i], "^", &nums[inum]);
-    solveSeq(&opers[i], "/*", &nums[inum]);
-    
-    while(i != j){
-      while(nums[inum] < 0){++inum;}  
-      if(haschar("+-", opers[i])){
-        nums[inum] = doOper(nums[inum], nums[inum+1], opers[i]);
-        opers[i] = ' ';
-        nums[inum+1] = -1;
-      }
-      j--;
-    }
-  }
-}
-
 float getNum(char** src)
 {
   mvPtrFwd(src, " +-/*()^");
@@ -237,27 +189,27 @@ float doOper(float num1,
 
 void solveSeq(char *opers,
               char *actual_opers,
-              float *nums)
+              float *nums, 
+              int lim)
 {
-  while(*opers!='\0'){
-    if(haschar(actual_opers, *opers) &&
-        haschar(actual_opers, *(opers+1))){
-      while(haschar(actual_opers, *(opers+1))){
-        *(nums+1) = doOper(*nums, *(nums+1), *opers);
+  while(lim){
+    if(haschar(actual_opers, *opers)){
+      if(haschar(actual_opers, *(opers+1)))
+        while(haschar(actual_opers, *(opers+1))){
+          *(nums+1) = doOper(*nums, *(nums+1), *opers);
+          *opers = ' ';
+          *nums = -1;
+          opers++,nums++,lim--;
+        }
+      if(haschar(actual_opers, *(opers))){
+        *nums = doOper(*nums, *(nums+1), *opers);
         *opers = ' ';
-        *nums = -1;
-        opers++,nums++;
+        *(nums+1) = -1;
       }
     }
-    if(haschar(actual_opers, *(opers))){
-      *(nums+1) = doOper(*nums, *(nums+1), *opers);
-      *opers = ' ';
-      *nums = -1;
-    }
-    opers++,nums++;
+    opers++,nums++, lim--;
   }
 }
-
 
 float getResult(char *src)
 {
@@ -267,22 +219,94 @@ float getResult(char *src)
   bool neg = isNeg(&src);
   getOpers(src, opers, neg);
   getNums(src, nums, neg);
-  
-  if (haschar(opers, '(')){
+  int lim = strlen(opers);
+  if (haschar(opers, '('))
     solveBrackes(src, &opers, &nums);
-  } else{
-    solveSeq(&opers, "^", &nums);
-    solveSeq(&opers, "/*", &nums);
-  }
-  
-  int i = 0, j = 1;
-  while(opers[i] != '\0'){
-    if(haschar("+-", opers[i])){
-      while(nums[j] < 0){j++;}  
-      nums[0] = doOper(nums[0], nums[j++], opers[i]);
+  else{
+    solveSeq(&opers, "^", &nums, lim);
+    solveSeq(&opers, "/*", &nums, lim);  
+    int i = 0, j = 1;
+    while(opers[i] != '\0'){
+      if(haschar("+-", opers[i])){
+        while(nums[j] < 0){j++;}  
+        nums[0] = doOper(nums[0], nums[j++], opers[i]);
+      }
+      i++;
     }
-    i++;
   }
   printf("%.6f\n", nums[0]);
   return nums[0];
+}
+
+int getIndNum(char *src, 
+              char *opers,
+              int posOp)
+{
+  int curp = 0, cnt = 0;
+  while(posOp){
+    if(haschar("-+/*^()", *src))
+      posOp--;
+    if(isdigit(*(src++)))
+      cnt++;
+    curp++;
+  }
+  return cnt;
+}
+
+float SumNonSeq(char* opers, 
+                int iop,
+                float* nums,
+                int inum,
+                int lim)
+{
+  while(lim){
+    int inum2 = inum + 1;
+    while(nums[inum] < 0){inum++;}
+    while(nums[inum2] < 0){inum2++;}
+    while(opers[iop] == ' '){iop++;}
+    if(iop < iop + lim){
+      nums[inum] = doOper(nums[inum], nums[inum2], opers[iop]);
+      opers[iop++] = ' ';
+      nums[inum2] = -1;
+    }else{
+      break;
+    }
+    lim--;
+  }
+}
+
+void solveBrackes(char *src,
+                  char *opers,
+                  float *nums)
+{
+  while(haschar(opers, '(')){
+    int i = 0;
+    while(opers[i] != ')'){
+      i++;
+    }
+    int j = i;
+    opers[i--] = ' ';
+    while(opers[i] != '\0' &&
+            opers[i] != '('){
+      i--;
+    }
+    opers[i++] = ' ';
+    int inum = getIndNum(src, opers, i);
+    solveSeq(&opers[i], "^", &nums[inum], j-i);
+    solveSeq(&opers[i], "/*", &nums[inum], j-i);
+    SumNonSeq(&opers[i], i, &nums[inum], inum, j-i);
+    while(i != j){
+      int inum2 = inum + 1;
+      while(nums[inum] < 0){inum++;}
+      while(nums[inum2] < 0){inum2++;}
+      while(opers[i] == ' '){i++;}
+      if(i < j){
+        nums[inum] = doOper(nums[inum], nums[inum2], opers[i]);
+        opers[i++] = ' ';
+        nums[inum2] = -1;
+      }else{
+        break;
+      }
+    }
+  }
 }
