@@ -24,12 +24,9 @@ float getNum(char**);
 float getPow(float, float);
 float getResult(char*);
 float doOper(float, float, char);
-float SumNonSeq(char*, int, float*, int, int);
-void solveBrackes(char*, char*, float*);
-void solveSeq(char *, char*, float*, int);
 void getNums(char *, float*, bool);
 void getOpers(char*, char*, bool);
-
+void solveBrackets(char*, char*, float*, int);
 
 //general functions
 bool haschar(char*, char);
@@ -41,7 +38,7 @@ void main()
 {
   char str[BUFF_SIZE];
   FILE *fp = fopen(filename, "r");
-  printf("Hello, this program works with file streams:\n");
+printf("Hello, welcome to c-calculator:\n \"c\" stands for crazy!\n");
   while(getLine(fp, &str)){
 printf("-> %s\n", str);
     float res = getResult(str);
@@ -211,6 +208,19 @@ void solveSeq(char *opers,
   }
 }
 
+void getArrSum(char **opers,
+               float **nums)
+{
+  int j = 1;
+  while(**opers != '\0'){
+      if(haschar("+-", **opers)){
+        while(((*nums)+j) < 0){j++;}  
+        **nums = doOper(**nums, *((*nums)+j++), **opers);
+      }
+      (*opers)++;
+    }
+}
+
 float getResult(char *src)
 {
   char opers[MBUFF_SIZE];  
@@ -221,20 +231,13 @@ float getResult(char *src)
   getNums(src, nums, neg);
   int lim = strlen(opers);
   if (haschar(opers, '('))
-    solveBrackes(src, &opers, &nums);
+    solveBrackes(src, &opers, &nums, lim);
   else{
     solveSeq(&opers, "^", &nums, lim);
     solveSeq(&opers, "/*", &nums, lim);  
-    int i = 0, j = 1;
-    while(opers[i] != '\0'){
-      if(haschar("+-", opers[i])){
-        while(nums[j] < 0){j++;}  
-        nums[0] = doOper(nums[0], nums[j++], opers[i]);
-      }
-      i++;
-    }
+    getArrSum(&opers, &nums);
   }
-  printf("%.6f\n", nums[0]);
+printf("%.6f\n", nums[0]);
   return nums[0];
 }
 
@@ -253,32 +256,30 @@ int getIndNum(char *src,
   return cnt;
 }
 
-float SumNonSeq(char* opers, 
-                int iop,
-                float* nums,
-                int inum,
-                int lim)
+void solveNonSeq(char* opers, 
+                 char* actual_opers,
+                 float* nums,
+                 int lim)
 {
   while(lim){
-    int inum2 = inum + 1;
-    while(nums[inum] < 0){inum++;}
-    while(nums[inum2] < 0){inum2++;}
-    while(opers[iop] == ' '){iop++;}
-    if(iop < iop + lim){
-      nums[inum] = doOper(nums[inum], nums[inum2], opers[iop]);
-      opers[iop++] = ' ';
-      nums[inum2] = -1;
-    }else{
-      break;
+    if(haschar(actual_opers, *opers)){
+      int inum = 0;
+      while(*(nums+inum) < 0){inum++;}
+      int inum2 = inum + 1;
+      while(*(nums+inum2) < 0){inum2++;}
+      *(nums+inum) = doOper(*(nums+inum), *(nums+inum2), *opers);
+      *opers = ' ';
+      *(nums+inum2) = -1;
     }
-    lim--;
+    opers++,lim--;
   }
 }
 
 void solveBrackes(char *src,
                   char *opers,
-                  float *nums)
-{
+                  float *nums,
+                  int lim)
+{ 
   while(haschar(opers, '(')){
     int i = 0;
     while(opers[i] != ')'){
@@ -294,19 +295,8 @@ void solveBrackes(char *src,
     int inum = getIndNum(src, opers, i);
     solveSeq(&opers[i], "^", &nums[inum], j-i);
     solveSeq(&opers[i], "/*", &nums[inum], j-i);
-    SumNonSeq(&opers[i], i, &nums[inum], inum, j-i);
-    while(i != j){
-      int inum2 = inum + 1;
-      while(nums[inum] < 0){inum++;}
-      while(nums[inum2] < 0){inum2++;}
-      while(opers[i] == ' '){i++;}
-      if(i < j){
-        nums[inum] = doOper(nums[inum], nums[inum2], opers[i]);
-        opers[i++] = ' ';
-        nums[inum2] = -1;
-      }else{
-        break;
-      }
-    }
+    solveNonSeq(&opers[i], "+-", &nums[inum], j-i);
   }
+    //solveNonSeq(&opers[0], "/*", &nums[0], lim);
+  //getArrSum(&opers, &nums);
 }
