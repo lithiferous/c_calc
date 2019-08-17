@@ -216,7 +216,7 @@ void getArrSum(char **opers,
         **nums = doOper(**nums, *((*nums)+j++), **opers);
       }
       (*opers)++;
-    }
+  }
 }
 
 void getExpression(char *opers,
