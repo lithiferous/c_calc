@@ -6,13 +6,10 @@
 
 #define BUFF_SIZE 128
 #define MBUFF_SIZE BUFF_SIZE / 2 + 1
-#define WORDS_MAX 3
-#define N_SIGN_DGTS 6
 
 #define separators " ,."
 #define operations "+-/*^()"
 #define filename "calc.dat"
-
 
 typedef int bool;
 #define false 0
@@ -188,24 +185,24 @@ float doOper(float num1,
 void solveSeq(char *opers,
               char *actual_opers,
               float *nums, 
-              int lim)
+              int max_opers)
 {
-  while(lim){
+  while(max_opers){
     if(haschar(actual_opers, *opers)){
       if(haschar(actual_opers, *(opers+1)))
         while(haschar(actual_opers, *(opers+1))){
           *(nums+1) = doOper(*nums, *(nums+1), *opers);
           *opers = ' ';
-          *nums = -1;
-          opers++,nums++,lim--;
+          *nums = 0;
+          opers++,nums++,max_opers--;
         }
       if(haschar(actual_opers, *(opers))){
         *nums = doOper(*nums, *(nums+1), *opers);
         *opers = ' ';
-        *(nums+1) = -1;
+        *(nums+1) = 0;
       }
     }
-    opers++,nums++, lim--;
+    opers++,nums++, max_opers--;
   }
 }
 
@@ -215,7 +212,7 @@ void getArrSum(char **opers,
   int j = 1;
   while(**opers != '\0'){
       if(haschar("+-", **opers)){
-        while(*((*nums)+j) < 0){j++;}  
+        while(*((*nums)+j) == 0){j++;}  //maxlen
         **nums = doOper(**nums, *((*nums)+j++), **opers);
       }
       (*opers)++;
@@ -224,10 +221,10 @@ void getArrSum(char **opers,
 
 void getExpression(char *opers,
                    float *nums,
-                   int lim)
+                   int max_opers)
 {
-  solveSeq(&opers[0], "^", &nums[0], lim);
-  solveSeq(&opers[0], "/*", &nums[0], lim);  
+  solveSeq(&opers[0], "^", &nums[0], max_opers);
+  solveSeq(&opers[0], "/*", &nums[0], max_opers);  
   getArrSum(&opers, &nums);
 }
 
@@ -239,13 +236,11 @@ float getResult(char *src)
   bool neg = isNeg(&src);
   getOpers(src, opers, neg);
   getNums(src, nums, neg);
-  int lim = strlen(opers);
+  int max_opers = strlen(opers);
   if (haschar(opers, '('))
-    getBrackets(src, &opers, &nums, lim);
-  else{
-    getExpression(&opers, &nums, lim);
-  }
-printf("%.6f\n", nums[0]);
+    getBrackets(src, &opers, &nums, max_opers);
+  else
+    getExpression(&opers, &nums, max_opers);
   return nums[0];
 }
 
@@ -264,49 +259,53 @@ int getIndNum(char *src,
   return cnt;
 }
 
+/* 1: Zaochno podtverdit nalichie 0 v originalynoy stroke,
+   2: Schitat kolichestvo ostavshihsya cifr i ne uvelichivat 
+   num2*/
+
 void solveBrackets(char *opers, 
                    char *actual_opers,
                    float *nums,
-                   int lim)
+                   int max_opers)
 {
-  while(lim){
+  while(max_opers){
     if(haschar(actual_opers, *opers)){
       int inum = 0;
-      while(*(nums+inum) < 0){inum++;}
+      while(*(nums+inum) == 0){inum++;} //maxlen
       int inum2 = inum + 1;
-      while(*(nums+inum2) < 0){inum2++;}
+      while(*(nums+inum2) == 0 ){inum2++;} //maxlen 
       *(nums+inum) = doOper(*(nums+inum), *(nums+inum2), *opers);
       *opers = ' ';
-      *(nums+inum2) = -1;
+      *(nums+inum2) = 0;
     }
-    opers++,lim--;
+    opers++,max_opers--;
   }
 }
 
 void solveNonSeq(char *opers, 
                  char *actual_opers,
                  float *nums,
-                 int lim)
+                 int max_opers)
 {
-  int i = 0;
-  while(lim){
+  int i = 0, max_nums = max_opers * 2;
+  while(max_opers){
     if(haschar(actual_opers, *opers)){
-      while(nums[i] < 0){i++;}
+      while(nums[i] == 0){i++;} 
       int j = i + 1;
-      while(nums[j] < 0){j++;}
+      while(nums[j] == 0){j++;} //maxlen
       nums[i++] = doOper(nums[i], nums[j], *opers);
       *opers = ' ';
-      nums[j] = -1;
-      i = ++j;
+      nums[j] = 0;
+      i = ++j; max_nums--;
     }
-    opers++,lim--;
+    opers++,max_opers--;
   }
 }
 
 void getBrackets(char *src,
                  char *opers,
                  float *nums,
-                 int lim)
+                 int max_opers)
 { 
   while(haschar(opers, '(')){
     int i = 0;
@@ -315,8 +314,7 @@ void getBrackets(char *src,
     }
     int j = i;
     opers[i--] = ' ';
-    while(opers[i] != '\0' &&
-            opers[i] != '('){
+    while(opers[i] != '('){
       i--;
     }
     opers[i++] = ' ';
@@ -324,16 +322,14 @@ void getBrackets(char *src,
     if (opers[i] == '-'){
       opers[i] = ' '; 
       nums[inum] = -nums[inum];
-      solveSeq(&opers[i], "^", &nums[inum], j-i);
+      solveNonSeq(&opers[i], "^", &nums[inum], j-i);
       solveNonSeq(&opers[i], "/*", &nums[inum], j-i);
-      solveBrackets(&opers[i], "+-", &nums[inum], j-i);
-    } else {
-      solveSeq(&opers[i], "^", &nums[inum], j-i);
-      solveSeq(&opers[i], "/*", &nums[inum], j-i);
-      solveBrackets(&opers[i], "+-", &nums[inum], j-i);
     }
+    solveSeq(&opers[i], "^", &nums[inum], j-i);
+    solveSeq(&opers[i], "/*", &nums[inum], j-i);
+    solveBrackets(&opers[i], "+-", &nums[inum], j-i);//
   }
-    solveNonSeq(&opers[0], "^", &nums[0], lim);
-    solveNonSeq(&opers[0], "/*", &nums[0], lim);
+    solveNonSeq(&opers[0], "^", &nums[0], max_opers);//
+    solveNonSeq(&opers[0], "/*", &nums[0], max_opers);
     getArrSum(&opers, &nums);
 }
