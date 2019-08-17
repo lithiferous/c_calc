@@ -26,7 +26,7 @@ float getResult(char*);
 float doOper(float, float, char);
 void getNums(char *, float*, bool);
 void getOpers(char*, char*, bool);
-void solveBrackets(char*, char*, float*, int);
+void getBrackets(char*, char*, float*, int);
 
 //general functions
 bool haschar(char*, char);
@@ -92,6 +92,7 @@ void mvPtrFwd(char **src, char *str)
 
 bool isNeg(char **src)
 {
+  while(haschar(separators, **src)){(*src)++;}
   if (**src != '\0' && **src =='-'){
     (*src)++;
     return true;
@@ -214,11 +215,20 @@ void getArrSum(char **opers,
   int j = 1;
   while(**opers != '\0'){
       if(haschar("+-", **opers)){
-        while(((*nums)+j) < 0){j++;}  
+        while(*((*nums)+j) < 0){j++;}  
         **nums = doOper(**nums, *((*nums)+j++), **opers);
       }
       (*opers)++;
     }
+}
+
+void getExpression(char *opers,
+                   float *nums,
+                   int lim)
+{
+  solveSeq(&opers[0], "^", &nums[0], lim);
+  solveSeq(&opers[0], "/*", &nums[0], lim);  
+  getArrSum(&opers, &nums);
 }
 
 float getResult(char *src)
@@ -231,11 +241,9 @@ float getResult(char *src)
   getNums(src, nums, neg);
   int lim = strlen(opers);
   if (haschar(opers, '('))
-    solveBrackes(src, &opers, &nums, lim);
+    getBrackets(src, &opers, &nums, lim);
   else{
-    solveSeq(&opers, "^", &nums, lim);
-    solveSeq(&opers, "/*", &nums, lim);  
-    getArrSum(&opers, &nums);
+    getExpression(&opers, &nums, lim);
   }
 printf("%.6f\n", nums[0]);
   return nums[0];
@@ -256,10 +264,10 @@ int getIndNum(char *src,
   return cnt;
 }
 
-void solveNonSeq(char* opers, 
-                 char* actual_opers,
-                 float* nums,
-                 int lim)
+void solveBrackets(char *opers, 
+                   char *actual_opers,
+                   float *nums,
+                   int lim)
 {
   while(lim){
     if(haschar(actual_opers, *opers)){
@@ -275,10 +283,30 @@ void solveNonSeq(char* opers,
   }
 }
 
-void solveBrackes(char *src,
-                  char *opers,
-                  float *nums,
-                  int lim)
+void solveNonSeq(char *opers, 
+                 char *actual_opers,
+                 float *nums,
+                 int lim)
+{
+  int i = 0;
+  while(lim){
+    if(haschar(actual_opers, *opers)){
+      while(nums[i] < 0){i++;}
+      int j = i + 1;
+      while(nums[j] < 0){j++;}
+      nums[i++] = doOper(nums[i], nums[j], *opers);
+      *opers = ' ';
+      nums[j] = -1;
+      i = ++j;
+    }
+    opers++,lim--;
+  }
+}
+
+void getBrackets(char *src,
+                 char *opers,
+                 float *nums,
+                 int lim)
 { 
   while(haschar(opers, '(')){
     int i = 0;
@@ -293,10 +321,19 @@ void solveBrackes(char *src,
     }
     opers[i++] = ' ';
     int inum = getIndNum(src, opers, i);
-    solveSeq(&opers[i], "^", &nums[inum], j-i);
-    solveSeq(&opers[i], "/*", &nums[inum], j-i);
-    solveNonSeq(&opers[i], "+-", &nums[inum], j-i);
+    if (opers[i] == '-'){
+      opers[i] = ' '; 
+      nums[inum] = -nums[inum];
+      solveSeq(&opers[i], "^", &nums[inum], j-i);
+      solveNonSeq(&opers[i], "/*", &nums[inum], j-i);
+      solveBrackets(&opers[i], "+-", &nums[inum], j-i);
+    } else {
+      solveSeq(&opers[i], "^", &nums[inum], j-i);
+      solveSeq(&opers[i], "/*", &nums[inum], j-i);
+      solveBrackets(&opers[i], "+-", &nums[inum], j-i);
+    }
   }
-    //solveNonSeq(&opers[0], "/*", &nums[0], lim);
-  //getArrSum(&opers, &nums);
+    solveNonSeq(&opers[0], "^", &nums[0], lim);
+    solveNonSeq(&opers[0], "/*", &nums[0], lim);
+    getArrSum(&opers, &nums);
 }
