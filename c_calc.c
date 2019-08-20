@@ -118,7 +118,9 @@ void putExpression(float *dst_nums,
   if(isNeg(src))
     *dst_nums++ = 0;
   while(*src != '\0'){
-    if(haschar(operations,*src))    
+    if (haschar("(", *src) && isNeg(src+1))
+      *dst_nums++ = 0, *dst_opers++ = *src++;
+    else if(haschar(operations,*src))    
       *dst_opers++ = *src++;
     else if(haschar(".", *src) || isdigit(*src))
       *dst_nums++ = getNum(&src);
@@ -215,7 +217,9 @@ float getResult(char *src)
     getBrackets(src, opers, nums, max_opers);
   else
     getExpression(opers, nums, max_opers);
-  return nums[0];
+  int i = 0;
+  while(nums[i] == -1){i++;}
+  return nums[i];
 }
 
 void countNum(char *src, int *cnt)
@@ -245,28 +249,33 @@ int getIndNum(char *src, int cntOp)
   return cntNum;
 }
 
+void shiftlStr(char *src, int n)
+{
+  while(*src != '\0'){
+    *src++ = *(src+n);
+  };
+}
+
 void getBrackets(char *src,
                  char *opers,
                  float *nums,
                  int max_opers)
 { 
-  int total_brackets = 0;
+  int bracket = 0;
   while(haschar(opers, '(')){
     int i = 0;
     while(*(opers+i) != ')'){
       i++;
     }
-    int j = i;
+    int j = --i;
     while(*(opers+i) != '('){
       i--;
     }
-    strcpy(opers+i, opers+i+1);
-    int inum = getIndNum(src, i);
-    getExpression(opers+i, nums+inum, j-i-1);
-    printf("dst: %s\n", opers+j-1);
-    printf("src: %s\n", opers+j);
-    strcpy(opers+j-1, opers+j);
-    max_opers-=2;
+    int inum = getIndNum(src, i+bracket);
+    shiftlStr(opers+i, 1);
+    getExpression(opers+i, nums+inum, j-i);
+    shiftlStr(opers+j, 1);
+    bracket++, max_opers-=2;
   }
   getExpression(opers, nums, max_opers);
 }
