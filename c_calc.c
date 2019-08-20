@@ -16,13 +16,11 @@ typedef int bool;
 #define true 1
 
 //specific
-bool isNeg(char **);
+bool isNeg(char *);
 float getNum(char**);
 float getPow(float, float);
 float getResult(char*);
 float doOper(float, float, char);
-void getNums(char *, float*, bool);
-void getOpers(char*, char*, bool);
 void getBrackets(char*, char*, float*, int);
 
 //general functions
@@ -87,37 +85,6 @@ void mvPtrFwd(char **src, char *str)
     }
 }
 
-bool isNeg(char **src)
-{
-  while(haschar(separators, **src)){(*src)++;}
-  if (**src != '\0' && **src =='-'){
-    (*src)++;
-    return true;
-  }
-  return false;
-}
-
-void getOpers(char *src, 
-              char *dst_opers,
-              bool neg)
-{ 
- mvPtrFwd(&src, separators);
- if (neg)
-  mvPtrFwd(&src, "-");
- while (*src != '\0'){
-  if(haschar(operations,*src))    
-    *dst_opers++ = *src++;
-  else if(haschar("()., ", *src) ||
-          isdigit(*src))
-    *src++;
-  else{
-    char s[2]; s[0] = *src; s[1] = '\0';
-    xassert(false, "wrong math operation", s, "!");
-  }
- }
- *dst_opers = '\0';
-}
-
 float getNum(char** src)
 {
   mvPtrFwd(src, " +-/*()^");
@@ -136,18 +103,33 @@ float getNum(char** src)
   return num;
 }
 
-void getNums(char *src, 
-             float *num,
-             bool neg)
+bool isNeg(char *src)
 {
-  if(neg){
-    *num++ = - getNum(&src);
-    mvPtrFwd(&src, " +-/*()^");
-  }
+  mvPtrFwd(&src, separators);
+  if (*src != '\0' && *src =='-')
+    return true;
+  return false;
+}
+
+void putExpression(float *dst_nums,
+                   char *dst_opers, 
+                   char *src)
+{
+  if(isNeg(src))
+    *dst_nums++ = 0;
   while(*src != '\0'){
-    *num++ = getNum(&src);
-    mvPtrFwd(&src, " +-/*()^");
-  }
+    if(haschar(operations,*src))    
+      *dst_opers++ = *src++;
+    else if(haschar(".", *src) || isdigit(*src))
+      *dst_nums++ = getNum(&src);
+    else if(haschar(separators, *src))
+      src++;
+    else {
+      char s[2]; s[0] = *src; s[1] = '\0';
+      xassert(false, "symbol not recognised: \"", s, "\"\n");
+    }
+ }
+ *dst_opers = '\0';
 }
 
 float getPow(float num, float n)
@@ -187,35 +169,29 @@ void solveSeq(char *opers,
               float *nums, 
               int max_opers)
 {
+  bool resNeg = false;
   while(max_opers){
-    if(haschar(actual_opers, *opers)){
-      if(haschar(actual_opers, *(opers+1)))
-        while(haschar(actual_opers, *(opers+1))){
-          *(nums+1) = doOper(*nums, *(nums+1), *opers);
-          *opers = ' ';
-          *nums = 0;
-          opers++,nums++,max_opers--;
-        }
-      if(haschar(actual_opers, *(opers))){
-        *nums = doOper(*nums, *(nums+1), *opers);
-        *opers = ' ';
-        *(nums+1) = 0;
+    if (haschar(actual_opers, *(opers))){
+      int i = 1;
+      while(*(nums+i) == -1){i++;}
+      float tmp;
+      if(resNeg)
+        tmp = doOper(-(*nums), *(nums+i), *opers);
+      else 
+        tmp = doOper(*nums, *(nums+i), *opers);
+      if (tmp < 0){
+        *(nums+i) = -tmp;
+        resNeg = true;
+      } else {
+        *(nums+i) = tmp;
+        resNeg = false;
       }
+      *opers = ' ';
+      *nums = -1;      
+      opers++,nums++,max_opers--;
+    } else{
+      opers++,nums++,max_opers--;
     }
-    opers++,nums++, max_opers--;
-  }
-}
-
-void getArrSum(char **opers,
-               float **nums)
-{
-  int j = 1;
-  while(**opers != '\0'){
-      if(haschar("+-", **opers)){
-        while(*((*nums)+j) == 0){j++;}  //maxlen
-        **nums = doOper(**nums, *((*nums)+j++), **opers);
-      }
-      (*opers)++;
   }
 }
 
@@ -223,9 +199,9 @@ void getExpression(char *opers,
                    float *nums,
                    int max_opers)
 {
-  solveSeq(&opers[0], "^", &nums[0], max_opers);
-  solveSeq(&opers[0], "/*", &nums[0], max_opers);  
-  getArrSum(&opers, &nums);
+  solveSeq(opers, "^", nums, max_opers);
+  solveSeq(opers, "/*", nums, max_opers);    
+  solveSeq(opers, "+-", nums, max_opers);   
 }
 
 float getResult(char *src)
@@ -233,73 +209,40 @@ float getResult(char *src)
   char opers[MBUFF_SIZE];  
   float nums[MBUFF_SIZE];
 
-  bool neg = isNeg(&src);
-  getOpers(src, opers, neg);
-  getNums(src, nums, neg);
+  putExpression(nums, opers, src);
   int max_opers = strlen(opers);
   if (haschar(opers, '('))
-    getBrackets(src, &opers, &nums, max_opers);
+    getBrackets(src, opers, nums, max_opers);
   else
-    getExpression(&opers, &nums, max_opers);
+    getExpression(opers, nums, max_opers);
   return nums[0];
 }
 
-int getIndNum(char *src, 
-              char *opers,
-              int posOp)
+void countNum(char *src, int *cnt)
 {
-  int curp = 0, cnt = 0;
-  while(posOp){
+  int sep = 1;
+  do{
+    if(*src == '.'){
+      src++;
+      sep--;
+    }
+    src++;
+  }while(isdigit(*src));
+  xassert(sep > 0, "invalid number: ", src, "");
+  (*cnt)++;
+}
+
+int getIndNum(char *src, int cntOp)
+{
+  int cntNum = 0;
+  while(cntOp){
     if(haschar("-+/*^()", *src))
-      posOp--;
-    if(isdigit(*(src++)))
-      cnt++;
-    curp++;
+      cntOp--;
+    else if(isdigit(*src))
+      countNum(src, &cntNum);
+    src++;
   }
-  return cnt;
-}
-
-/* 1: Zaochno podtverdit nalichie 0 v originalynoy stroke,
-   2: Schitat kolichestvo ostavshihsya cifr i ne uvelichivat 
-   num2*/
-
-void solveBrackets(char *opers, 
-                   char *actual_opers,
-                   float *nums,
-                   int max_opers)
-{
-  while(max_opers){
-    if(haschar(actual_opers, *opers)){
-      int inum = 0;
-      while(*(nums+inum) == 0){inum++;} //maxlen
-      int inum2 = inum + 1;
-      while(*(nums+inum2) == 0 ){inum2++;} //maxlen 
-      *(nums+inum) = doOper(*(nums+inum), *(nums+inum2), *opers);
-      *opers = ' ';
-      *(nums+inum2) = 0;
-    }
-    opers++,max_opers--;
-  }
-}
-
-void solveNonSeq(char *opers, 
-                 char *actual_opers,
-                 float *nums,
-                 int max_opers)
-{
-  int i = 0, max_nums = max_opers * 2;
-  while(max_opers){
-    if(haschar(actual_opers, *opers)){
-      while(nums[i] == 0){i++;} 
-      int j = i + 1;
-      while(nums[j] == 0){j++;} //maxlen
-      nums[i++] = doOper(nums[i], nums[j], *opers);
-      *opers = ' ';
-      nums[j] = 0;
-      i = ++j; max_nums--;
-    }
-    opers++,max_opers--;
-  }
+  return cntNum;
 }
 
 void getBrackets(char *src,
@@ -307,29 +250,23 @@ void getBrackets(char *src,
                  float *nums,
                  int max_opers)
 { 
+  int total_brackets = 0;
   while(haschar(opers, '(')){
     int i = 0;
-    while(opers[i] != ')'){
+    while(*(opers+i) != ')'){
       i++;
     }
     int j = i;
-    opers[i--] = ' ';
-    while(opers[i] != '('){
+    while(*(opers+i) != '('){
       i--;
     }
-    opers[i++] = ' ';
-    int inum = getIndNum(src, opers, i);
-    if (opers[i] == '-'){
-      opers[i] = ' '; 
-      nums[inum] = -nums[inum];
-      solveNonSeq(&opers[i], "^", &nums[inum], j-i);
-      solveNonSeq(&opers[i], "/*", &nums[inum], j-i);
-    }
-    solveSeq(&opers[i], "^", &nums[inum], j-i);
-    solveSeq(&opers[i], "/*", &nums[inum], j-i);
-    solveBrackets(&opers[i], "+-", &nums[inum], j-i);//
+    strcpy(opers+i, opers+i+1);
+    int inum = getIndNum(src, i);
+    getExpression(opers+i, nums+inum, j-i-1);
+    printf("dst: %s\n", opers+j-1);
+    printf("src: %s\n", opers+j);
+    strcpy(opers+j-1, opers+j);
+    max_opers-=2;
   }
-    solveNonSeq(&opers[0], "^", &nums[0], max_opers);//
-    solveNonSeq(&opers[0], "/*", &nums[0], max_opers);
-    getArrSum(&opers, &nums);
+  getExpression(opers, nums, max_opers);
 }
