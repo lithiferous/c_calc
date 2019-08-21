@@ -236,7 +236,8 @@ void countNum(char *src, int *cnt)
   (*cnt)++;
 }
 
-int getIndNum(char *src, int cntOp)
+int getIndNum(char *src,
+              int cntOp)
 {
   int cntNum = 0;
   while(cntOp){
@@ -272,6 +273,8 @@ void getBrackets(char *src,
       i--;
     }
     int inum = getIndNum(src, i+bracket);
+    if(nums[inum+1]==0)
+      inum++;
     shiftlStr(opers+i, 1);
     getExpression(opers+i, nums+inum, j-i);
     shiftlStr(opers+j, 1);
