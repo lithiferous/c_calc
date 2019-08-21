@@ -169,25 +169,13 @@ void solveSeq(char *opers,
               float *nums, 
               int max_opers)
 {
-  bool resNeg = false;
   while(max_opers){
     if (haschar(actual_opers, *(opers))){
       int i = 1;
-      while(*(nums+i) == -1){i++;}
-      float tmp;
-      if(resNeg)
-        tmp = doOper(-(*nums), *(nums+i), *opers);
-      else 
-        tmp = doOper(*nums, *(nums+i), *opers);
-      if (tmp < 0){
-        *(nums+i) = -tmp;
-        resNeg = true;
-      } else {
-        *(nums+i) = tmp;
-        resNeg = false;
-      }
+      while(*(nums+i) == 0){i++;}
+      *(nums+i) = doOper(*nums, *(nums+i), *opers);
       *opers = ' ';
-      *nums = -1;      
+      *nums = 0;      
       opers++,nums++,max_opers--;
     } else
       opers++,nums++,max_opers--;
@@ -215,7 +203,7 @@ float getResult(char *src)
   else
     getExpression(opers, nums, max_opers);
   int i = 0;
-  while(nums[i] == -1){i++;}
+  while(nums[i] == 0){i++;}
   return nums[i];
 }
 
