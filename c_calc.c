@@ -80,9 +80,7 @@ bool haschar(char *str, char ch)
 
 void mvPtrFwd(char **src, char *str)
 {
- while(haschar(str, **src)){
-         (*src)++;
-    }
+ while(haschar(str, **src)){(*src)++;}
 }
 
 float getNum(char** src)
@@ -191,9 +189,8 @@ void solveSeq(char *opers,
       *opers = ' ';
       *nums = -1;      
       opers++,nums++,max_opers--;
-    } else{
+    } else
       opers++,nums++,max_opers--;
-    }
   }
 }
 
@@ -226,10 +223,8 @@ void countNum(char *src, int *cnt)
 {
   int sep = 1;
   do{
-    if(*src == '.'){
-      src++;
-      sep--;
-    }
+    if(*src == '.')
+      src++, sep--;
     src++;
   }while(isdigit(*src));
   xassert(sep > 0, "invalid number: ", src, "");
@@ -265,13 +260,9 @@ void getBrackets(char *src,
   int bracket = 0;
   while(haschar(opers, '(')){
     int i = 0;
-    while(*(opers+i) != ')'){
-      i++;
-    }
+    while(*(opers+i) != ')'){i++;}
     int j = --i;
-    while(*(opers+i) != '('){
-      i--;
-    }
+    while(*(opers+i) != '('){i--;}
     int inum = getIndNum(src, i+bracket);
     if(nums[inum+1]==0)
       inum++;
