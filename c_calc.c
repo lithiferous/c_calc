@@ -109,8 +109,8 @@ bool isNeg(char *src)
   return false;
 }
 
-void putExpression(float *dst_nums,
-                   char *dst_opers, 
+int putExpression(float *dst_nums,
+                  char *dst_opers, 
                    char *src)
 {
   if(isNeg(src))
@@ -164,6 +164,16 @@ float doOper(float num1,
 	}
 }
 
+int getIndNum(char *opers)
+{
+  int ind = 0;
+  while(*opers != '\0'){
+    if(*opers != ' ')
+      return ind;
+    ind++;
+  }
+}
+
 void solveSeq(char *opers,
               char *actual_opers,
               float *nums, 
@@ -171,8 +181,7 @@ void solveSeq(char *opers,
 {
   while(max_opers){
     if (haschar(actual_opers, *(opers))){
-      int i = 1;
-      while(*(nums+i) == 0){i++;}
+      int i = getIndNum(*opers);
       *(nums+i) = doOper(*nums, *(nums+i), *opers);
       *opers = ' ';
       *nums = 0;      
@@ -207,57 +216,20 @@ float getResult(char *src)
   return nums[i];
 }
 
-void countNum(char *src, int *cnt)
-{
-  int sep = 1;
-  do{
-    if(*src == '.')
-      src++, sep--;
-    src++;
-  }while(isdigit(*src));
-  xassert(sep > 0, "invalid number: ", src, "");
-  (*cnt)++;
-}
-
-int getIndNum(char *src,
-              int cntOp)
-{
-  int cntNum = 0;
-  while(cntOp){
-    if(haschar("-+/*^()", *src))
-      cntOp--;
-    else if(isdigit(*src))
-      countNum(src, &cntNum);
-    src++;
-  }
-  return cntNum;
-}
-
-void shiftlStr(char *src, int n)
-{
-  while(*src != '\0'){
-    *src++ = *(src+n);
-  };
-}
-
 void getBrackets(char *src,
                  char *opers,
                  float *nums,
                  int max_opers)
 { 
-  int bracket = 0;
   while(haschar(opers, '(')){
     int i = 0;
     while(*(opers+i) != ')'){i++;}
-    int j = --i;
+    int j = i;
     while(*(opers+i) != '('){i--;}
-    int inum = getIndNum(src, i+bracket);
-    if(nums[inum+1]==0)
-      inum++;
-    shiftlStr(opers+i, 1);
+    *(opers+i) = '!';
+    int inum = getIndNum(opers+i);
     getExpression(opers+i, nums+inum, j-i);
-    shiftlStr(opers+j, 1);
-    bracket++, max_opers-=2;
+    *(opers+j) = '!';
   }
   getExpression(opers, nums, max_opers);
 }
