@@ -16,12 +16,8 @@ typedef int bool;
 #define true 1
 
 //specific
-bool isNeg(char *);
 float getNum(char**);
-float getPow(float, float);
 float getResult(char*);
-float doOper(float, float, char);
-void getBrackets(char*, char*, float*);
 
 //general functions
 bool haschar(char*, char);
@@ -83,9 +79,9 @@ void mvPtrFwd(char **src, char *str)
  while(haschar(str, **src)){(*src)++;}
 }
 
-float getNum(char** src)
+float getNum(char **src)
 {
-  mvPtrFwd(src, " +-/*()^");
+  mvPtrFwd(src, separators);
   float num = 0; 
   while(isdigit(**src)){
 	  num = num * 10 + *(*src)++ - '0'; 
@@ -111,7 +107,7 @@ bool isNeg(char *src)
 
 int putExpression(float *dst_nums,
                   char *dst_opers, 
-                   char *src)
+                  char *src)
 {
   if(isNeg(src))
     *dst_nums++ = 0;
@@ -164,17 +160,19 @@ float doOper(float num1,
 	}
 }
 
-int getIndNum(char *opers, 
-              int nBrackets)
+int getIndNum(char *opers)
 {
   int ind = 1;
-  while(*opers != ')' && *opers != '\0'){
-    opers++;
-  }
-  while(*opers != ')' && *opers != '\0'){
-    opers--;
-  }
-  return ind;
+  if(haschar(opers, '(')){
+    while(*opers != ')'){
+      if(*opers != '(' && *opers != '!')
+        ind++;
+      opers++;
+    } 
+    while(*opers != '('){ind--, opers--;};
+  } else 
+    while(*opers == ' '){ind++, opers++;}
+  return ind; 
 }
 
 void solveSeq(char *opers,
@@ -211,8 +209,8 @@ float getResult(char *src)
     getBrackets(src, opers, nums);
   else
     getExpression(opers, nums);
-  int i = getIndNum(opers);
-  return nums[i];
+  int i = getIndNum(opers) - 1;
+  return *(nums+i);
 }
 
 void getBrackets(char *src,
@@ -224,8 +222,8 @@ void getBrackets(char *src,
     while(*(opers+i) != ')'){i++;}
     int j = i;
     while(*(opers+i) != '('){i--;}
+    int inum = getIndNum(opers); //j-i;
     *(opers+i) = '!';
-    int inum = getIndNum(opers+i+1);
     getExpression(opers+i, nums+inum);
     *(opers+j) = '!';
   }
