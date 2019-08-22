@@ -21,7 +21,7 @@ float getNum(char**);
 float getPow(float, float);
 float getResult(char*);
 float doOper(float, float, char);
-void getBrackets(char*, char*, float*, int);
+void getBrackets(char*, char*, float*);
 
 //general functions
 bool haschar(char*, char);
@@ -164,40 +164,41 @@ float doOper(float num1,
 	}
 }
 
-int getIndNum(char *opers)
+int getIndNum(char *opers, 
+              int nBrackets)
 {
-  int ind = 0;
-  while(*opers != '\0'){
-    if(*opers != ' ')
-      return ind;
-    ind++;
+  int ind = 1;
+  while(*opers != ')' && *opers != '\0'){
+    opers++;
   }
+  while(*opers != ')' && *opers != '\0'){
+    opers--;
+  }
+  return ind;
 }
 
 void solveSeq(char *opers,
               char *actual_opers,
-              float *nums, 
-              int max_opers)
+              float *nums)
 {
-  while(max_opers){
+  while(*opers != '\0' && *opers != ')'){
     if (haschar(actual_opers, *(opers))){
-      int i = getIndNum(*opers);
+      int i = getIndNum(opers+1);
       *(nums+i) = doOper(*nums, *(nums+i), *opers);
       *opers = ' ';
-      *nums = 0;      
-      opers++,nums++,max_opers--;
-    } else
-      opers++,nums++,max_opers--;
+      *nums++ = 0;      
+    }else if (*opers != '!')
+      nums++;
+    opers++;
   }
 }
 
 void getExpression(char *opers,
-                   float *nums,
-                   int max_opers)
+                   float *nums)
 {
-  solveSeq(opers, "^", nums, max_opers);
-  solveSeq(opers, "/*", nums, max_opers);    
-  solveSeq(opers, "+-", nums, max_opers);   
+  solveSeq(opers, "^", nums);
+  solveSeq(opers, "/*", nums);    
+  solveSeq(opers, "+-", nums);   
 }
 
 float getResult(char *src)
@@ -206,20 +207,17 @@ float getResult(char *src)
   float nums[MBUFF_SIZE];
 
   putExpression(nums, opers, src);
-  int max_opers = strlen(opers);
   if (haschar(opers, '('))
-    getBrackets(src, opers, nums, max_opers);
+    getBrackets(src, opers, nums);
   else
-    getExpression(opers, nums, max_opers);
-  int i = 0;
-  while(nums[i] == 0){i++;}
+    getExpression(opers, nums);
+  int i = getIndNum(opers);
   return nums[i];
 }
 
 void getBrackets(char *src,
                  char *opers,
-                 float *nums,
-                 int max_opers)
+                 float *nums)
 { 
   while(haschar(opers, '(')){
     int i = 0;
@@ -227,9 +225,9 @@ void getBrackets(char *src,
     int j = i;
     while(*(opers+i) != '('){i--;}
     *(opers+i) = '!';
-    int inum = getIndNum(opers+i);
-    getExpression(opers+i, nums+inum, j-i);
+    int inum = getIndNum(opers+i+1);
+    getExpression(opers+i, nums+inum);
     *(opers+j) = '!';
   }
-  getExpression(opers, nums, max_opers);
+  getExpression(opers, nums);
 }
