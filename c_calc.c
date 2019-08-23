@@ -18,7 +18,6 @@ typedef int bool;
 //specific
 float getNum(char**);
 float getResult(char*);
-
 //general functions
 bool haschar(char*, char);
 bool getLine(FILE*, char*);
@@ -128,12 +127,16 @@ int putExpression(float *dst_nums,
  *dst_opers = '\0';
 }
 
-float getPow(float num, float n)
+float getPow(float x, unsigned int n)
 {
-  if (n <= 1){
-    return num;
-  }
-  return num*getPow(num, n - 1);
+  if (n==0)
+    return 1;
+  else if (n==1)
+    return x;
+  else if (n % 2 == 0 )
+    return getPow(x*x, n/2);
+  else
+    return getPow(x*x, n/2)*x;
 }
 
 float doOper(float num1, 
@@ -201,7 +204,6 @@ float getResult(char *src)
 {
   char opers[MBUFF_SIZE];  
   float nums[MBUFF_SIZE];
-
   putExpression(nums, opers, src);
   if (haschar(opers, '('))
     getBrackets(src, opers, nums);
@@ -211,7 +213,7 @@ float getResult(char *src)
   return *(nums+i);
 }
 
-int getBrNum(char *opers)
+int getBracketNum(char *opers)
 {
   int ind = 0;
   while(*opers != '|'){
@@ -232,7 +234,7 @@ void getBrackets(char *src,
     int j = i;
     while(*(opers+i) != '('){i--;}
     *(opers+i) = '|';
-    int inum = getBrNum(opers); //j-i;
+    int inum = getBracketNum(opers);
     *(opers+i) = '!';
     getExpression(opers+i+1, nums+inum);
     *(opers+j) = '!';
