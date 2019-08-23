@@ -163,15 +163,13 @@ float doOper(float num1,
 int getIndNum(char *opers)
 {
   int ind = 1;
-  if(haschar(opers, '(')){
-    while(*opers != ')'){
-      if(*opers != '(' && *opers != '!')
-        ind++;
-      opers++;
-    } 
-    while(*opers != '('){ind--, opers--;};
-  } else 
-    while(*opers == ' '){ind++, opers++;}
+  do{
+    if(*opers != ' ' && *opers != '!')
+      return ind;
+    if(*opers != '!')
+      ind++;
+    opers++;
+    }while(haschar(opers, ' '));
   return ind; 
 }
 
@@ -213,6 +211,17 @@ float getResult(char *src)
   return *(nums+i);
 }
 
+int getBrNum(char *opers)
+{
+  int ind = 0;
+  while(*opers != '|'){
+    if(*opers != '(' && *opers != '!')
+      ind++;
+    opers++;
+  }
+  return ind; 
+}
+
 void getBrackets(char *src,
                  char *opers,
                  float *nums)
@@ -222,9 +231,10 @@ void getBrackets(char *src,
     while(*(opers+i) != ')'){i++;}
     int j = i;
     while(*(opers+i) != '('){i--;}
-    int inum = getIndNum(opers); //j-i;
+    *(opers+i) = '|';
+    int inum = getBrNum(opers); //j-i;
     *(opers+i) = '!';
-    getExpression(opers+i, nums+inum);
+    getExpression(opers+i+1, nums+inum);
     *(opers+j) = '!';
   }
   getExpression(opers, nums);
